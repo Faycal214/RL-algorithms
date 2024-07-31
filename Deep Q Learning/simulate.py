@@ -1,20 +1,16 @@
 from test import dql
 import gymnasium as gym
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 import numpy as np
 
 env = gym.make('CartPole-v1', render_mode = 'rgb_array')
 
 # Reset the environment
 (current_state, _) = env.reset()
-sum_obtained_reward = 0
 terminal_state = False
+frames = [] 
 
-# Render the initial frame 
-prev_screen = env.render()
-plt.imshow(prev_screen)
-plt.axis('off')
-plt.show()
 
 while not terminal_state:
     # Select action using the trained model
@@ -25,21 +21,27 @@ while not terminal_state:
 
     # Apply the action
     (next_state, reward, terminal_state, _, _) = env.step(action)
-    sum_obtained_reward += reward
-
-    # Render the environment
-    screen = env.render()
-
-    # Display the updated frame
-    plt.imshow(screen)
-    plt.axis('off')
-    plt.show()
-
-    # Pause briefly to slow down the visualization
-    plt.pause(0.01)
+    
+    frames.append(env.render())
 
     # Update current state
     current_state = next_state
 
 env.close()
-print(f"Total obtained reward: {sum_obtained_reward}")
+
+# Convert frames to a video and display it
+plt.figure(figsize=(frames[0].shape[1] / 72.0, frames[0].shape[0] / 72.0), dpi=72)
+patch = plt.imshow(frames[0])
+plt.axis('off')
+
+def animate(i):
+    patch.set_data(frames[i])
+
+anim = animation.FuncAnimation(plt.gcf(), animate, frames=len(frames), interval=100)
+plt.show()
+
+# Save the frames as a video
+Writer = animation.writers['ffmpeg']
+writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
+
+anim.save('DQN_solution.mp4', writer=writer)
