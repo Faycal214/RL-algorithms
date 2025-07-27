@@ -1,61 +1,66 @@
-import gymnasium as gym
+import gym
 import numpy as np
-import torch
-import torch.nn as nn
-import cma
 
-# Define your policy NN
-class Policy(nn.Module):
-    def __init__(self, state_dim, action_dim):
-        super().__init__()
-        self.fc1 = nn.Linear(state_dim, 32)
-        self.relu = nn.ReLU()
-        self.fc2 = nn.Linear(32, action_dim)
-    
-    def forward(self, x):
-        return torch.tanh(self.fc2(self.relu(self.fc1(x))))
+np.bool8 = np.bool_
+# ==== Define the Environment ====
+env = gym.make('CartPole-v1', render_mode = "rgb_array")
+n_states = env.observation_space.shape[0]
+n_actions = env.action_space.n
 
-    def get_weights(self):
-        return np.concatenate([p.data.cpu().numpy().flatten() for p in self.parameters()])
+# ==== PSO Parameters ====
+n_particles = 30
+n_dimensions = n_states
+blo, bup = -1.0, 1.0
+w = 0.5            # inertia
+phi_p = 1.5        # cognitive
+phi_g = 1.5        # social
+max_iter = 500
 
-    def set_weights(self, flat_weights):
-        pointer = 0
-        for p in self.parameters():
-            size = np.prod(p.shape)
-            p.data = torch.tensor(flat_weights[pointer:pointer+size].reshape(p.shape), dtype=torch.float32)
-            pointer += size
-
-# Evaluation function
-def evaluate(policy, env, episodes=3):
+# ==== Fitness Function: Total Reward ====
+def evaluate_policy(weights):
     total_reward = 0
-    for _ in range(episodes):
-        obs = env.reset()[0]
-        done = False
-        while not done:
-            obs_tensor = torch.tensor(obs, dtype=torch.float32)
-            action = policy(obs_tensor).detach().numpy()
-            obs, reward, terminated, truncated, _ = env.step(action)
-            done = terminated or truncated
-            total_reward += reward
-    return -total_reward  # CMA-ES minimizes
+    obs = env.reset()[0] 
+    done = False
+    while not done:
+        action = 1 if np.dot(weights, obs) > 0 else 0
+        obs, reward, terminated, truncated, _ = env.step(action)
+        done = terminated or truncated
+        total_reward += reward
+    return total_reward
 
-# Setup
-env = gym.make("LunarLanderContinuous-v3")
-policy = Policy(env.observation_space.shape[0], env.action_space.shape[0])
-params_dim = len(policy.get_weights())
+# ==== Initialize PSO ====
+particles = np.random.uniform(blo, bup, (n_particles, n_dimensions))
+velocities = np.random.uniform(-abs(bup-blo), abs(bup-blo), (n_particles, n_dimensions))
+p_best = particles.copy()
+p_best_scores = np.array([evaluate_policy(p) for p in particles])
+g_best = p_best[np.argmax(p_best_scores)]
+g_best_score = np.max(p_best_scores)
 
-# CMA-ES optimizer
-es = cma.CMAEvolutionStrategy(params_dim * [0], 0.5)
+# ==== PSO Main Loop ====
+for iteration in range(max_iter):
+    for i in range(n_particles):
+        r_p = np.random.rand(n_dimensions)
+        r_g = np.random.rand(n_dimensions)
 
-for gen in range(100):
-    solutions = es.ask()
-    fitnesses = []
-    for s in solutions:
-        policy.set_weights(s)
-        fitnesses.append(evaluate(policy, env))
-    es.tell(solutions, fitnesses)
-    es.disp()
+        velocities[i] = (
+            w * velocities[i]
+            + phi_p * r_p * (p_best[i] - particles[i])
+            + phi_g * r_g * (g_best - particles[i])
+        )
+        particles[i] += velocities[i]
 
-# Final result
-best = es.result.xbest
-policy.set_weights(best)
+        score = evaluate_policy(particles[i])
+        if score > p_best_scores[i]:
+            p_best[i] = particles[i]
+            p_best_scores[i] = score
+            if score > g_best_score:
+                g_best = particles[i]
+                g_best_score = score
+
+    print(f"Iteration {iteration+1} - Best Score: {g_best_score}")
+
+# ==== Final Run ====
+print("\nRunning final policy...")
+final_score = evaluate_policy(g_best)
+print("Final Score:", final_score)
+env.close()
