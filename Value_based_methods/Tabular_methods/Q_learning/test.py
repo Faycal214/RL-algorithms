@@ -10,8 +10,8 @@ import matplotlib.animation as animation
 alpha = 0.1 # learning rate
 epsilon = 0.7
 gamma = 0.5 # discount factor
-episodes = 25000 # nomber of episodes
-env = gym.make('FrozenLake-v1', desc=generate_random_map(size=6), render_mode= 'rgb_array')
+episodes = 100000 # nomber of episodes
+env = gym.make('FrozenLake-v1', desc=generate_random_map(size=8), render_mode= 'rgb_array')
 agent = QLearning(env = env, alpha = alpha, gamma = gamma, epsilon = epsilon, episodes= episodes)
 
 # training the algorithm 
@@ -20,7 +20,7 @@ agent.training_process()
 # simulate the envorinment
 (current_state, _) = env.reset()
 done = False
-frames = [] 
+frames = []
 while not done :
     action = np.argmax(agent.q_table[current_state])
     (next_state, reward, done, _, _) = env.step(action)

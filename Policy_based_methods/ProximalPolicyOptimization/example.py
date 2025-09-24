@@ -3,7 +3,7 @@ from agent import PPOAgent
 import gymnasium as gym
 
 env = gym.make("CartPole-v1")
-N = 250
+N = 100
 agent = PPOAgent(env.observation_space.shape[0], n_actions = env.action_space.n)
 n_games = 950
 

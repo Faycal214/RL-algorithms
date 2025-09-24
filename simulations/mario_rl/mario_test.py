@@ -4,7 +4,7 @@ from nes_py.wrappers import JoypadSpace
 import gym_super_mario_bros
 from gym_super_mario_bros.actions import SIMPLE_MOVEMENT
 
-sys.path.append("C:\\Users\\lenovo\\Desktop\\Github Reposetories\\RL-algorithms\\DQN")
+sys.path.append("/home/billel/Desktop/ai_projects/RL-algorithms/DQN")
 from agent import dqn
 from env_processing import *
 
@@ -23,7 +23,7 @@ for episode in range(1000):
     while not done:
         processed = process_state(state)
         action = dqn_agent.choose_action(processed)
-        next_state, reward, done, info = env.step(action)
+        next_state, reward, done, info= env.step(action)
         score += reward
         dqn_agent.memory.store_transition(processed, action, reward, process_state(next_state), done)
         dqn_agent.learn()

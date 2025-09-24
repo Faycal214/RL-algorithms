@@ -10,7 +10,7 @@ if __name__ == '__main__' :
     learning_rate = 0.0001
     epsilon = 1.0
     epsilon_min = 0.1
-    epsilon_decay = 0.995
+    epsilon_decay = 0.9995
     memory_size = 1000
     batch_size = 64
     combined = False
